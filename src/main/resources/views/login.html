@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Iniciar Sesión - BuildBag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'monospace'],
+                        'display': ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        'midnight': '#0a0e17',
+                        'slate-dark': '#111827',
+                        'electric': '#3b82f6',
+                        'electric-light': '#60a5fa',
+                        'emerald-accent': '#10b981',
+                        'amber-accent': '#f59e0b',
+                        'coral': '#f43f5e',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .page-wrapper {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .glass-card-dark {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .glass-card-light {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .input-field-dark {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+        }
+        
+        .input-field-light {
+            background: rgba(248, 250, 252, 0.9);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #1e293b;
+        }
+        
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            outline: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .pattern-bg {
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        }
+        
+        .floating-shapes-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(30px, -30px) rotate(90deg); }
+            50% { transform: translate(0, -60px) rotate(180deg); }
+            75% { transform: translate(-30px, -30px) rotate(270deg); }
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        /* Dark mode default styles */
+        .dark .title-text {
+            color: #ffffff;
+        }
+        
+        .dark .subtitle-text {
+            color: #9ca3af;
+        }
+        
+        .dark .card-title {
+            color: #ffffff;
+        }
+        
+        .dark .label-text {
+            color: #d1d5db;
+        }
+        
+        .dark .footer-text {
+            color: #6b7280;
+        }
+        
+        /* Light mode styles */
+        .light .title-text {
+            color: #1e293b;
+        }
+        
+        .light .subtitle-text {
+            color: #475569;
+        }
+        
+        .light .card-title {
+            color: #1e293b;
+        }
+        
+        .light .label-text {
+            color: #334155;
+        }
+        
+        .light .footer-text {
+            color: #64748b;
+        }
+        
+        /* Background colors */
+        .dark-bg {
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 50%, #0f172a 100%);
+        }
+        
+        .light-bg {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%);
+        }
+    </style>
+</head>
+<body class="pattern-bg transition-colors duration-300 dark-bg dark" id="pageBody">
+    <div class="page-wrapper">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" class="fixed top-6 right-6 z-50 p-3 rounded-xl transition-all duration-300 bg-slate-800 text-yellow-400 hover:bg-slate-700" id="themeToggle">
+            <svg id="sunIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <svg id="moonIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+        </button>
+
+        <!-- Floating Shapes Container -->
+        <div class="floating-shapes-container">
+            <div class="floating-shape w-96 h-96 bg-blue-500" style="top: -10%; left: -10%; animation-delay: 0s;"></div>
+            <div class="floating-shape w-64 h-64 bg-emerald-500" style="top: 40%; right: -5%; animation-delay: -5s;"></div>
+            <div class="floating-shape w-80 h-80 bg-purple-500" style="bottom: -10%; left: 20%; animation-delay: -10s;"></div>
+        </div>
+
+        <div class="min-h-screen flex items-center justify-center p-4 relative z-10">
+            <div class="w-full max-w-md">
+                <!-- Logo -->
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-electric to-blue-700 mb-4 shadow-lg shadow-blue-500/30">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-bold title-text">BuildBag</h1>
+                    <p class="subtitle-text mt-2">Generador de Configuración .properties</p>
+                </div>
+
+                <!-- Login Card -->
+                <div class="glass-card glass-card-dark rounded-2xl p-8" id="loginCard">
+                    <h2 class="text-2xl font-bold mb-6 text-center card-title">Iniciar Sesión</h2>
+                    
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="hidden mb-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm text-center">
+                        <span id="errorText">Credenciales inválidas</span>
+                    </div>
+
+                    <form id="loginForm" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 label-text" for="username">Usuario</label>
+                            <input 
+                                type="text" 
+                                id="username" 
+                                name="username"
+                                class="input-field input-field-dark w-full px-4 py-3 rounded-xl transition-all duration-300"
+                                placeholder="Ingresa tu usuario"
+                                required
+                                autocomplete="username"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2 label-text" for="password">Contraseña</label>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password"
+                                    class="input-field input-field-dark w-full px-4 py-3 rounded-xl transition-all duration-300 pr-12"
+                                    placeholder="Ingresa tu contraseña"
+                                    required
+                                    autocomplete="current-password"
+                                >
+                                <button type="button" onclick="togglePassword('password')" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors">
+                                    <svg id="password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            id="submitBtn"
+                            class="btn-primary w-full py-4 rounded-xl text-white font-semibold text-lg flex items-center justify-center gap-2"
+                        >
+                            <span id="btnText">Iniciar Sesión</span>
+                            <svg id="btnSpinner" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </form>
+
+                    <div class="mt-6 text-center">
+                        <p class="subtitle-text">
+                            ¿No tienes cuenta? 
+                            <a href="/register" class="text-electric hover:text-electric-light font-medium transition-colors">Regístrate aquí</a>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <p class="text-center mt-8 text-sm footer-text">
+                    © 2025 BuildBag. Todos los derechos reservados.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const isDark = document.getElementById('pageBody').classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function applyTheme(theme) {
+            const body = document.getElementById('pageBody');
+            const card = document.getElementById('loginCard');
+            const inputs = document.querySelectorAll('.input-field');
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+
+            if (theme === 'dark') {
+                body.classList.add('dark', 'dark-bg');
+                body.classList.remove('light', 'light-bg');
+                card.classList.add('glass-card-dark');
+                card.classList.remove('glass-card-light');
+                themeToggle.classList.add('bg-slate-800', 'text-yellow-400', 'hover:bg-slate-700');
+                themeToggle.classList.remove('bg-white', 'text-slate-700', 'hover:bg-gray-100', 'shadow-lg');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+                
+                inputs.forEach(input => {
+                    input.classList.add('input-field-dark');
+                    input.classList.remove('input-field-light');
+                });
+            } else {
+                body.classList.remove('dark', 'dark-bg');
+                body.classList.add('light', 'light-bg');
+                card.classList.remove('glass-card-dark');
+                card.classList.add('glass-card-light');
+                themeToggle.classList.remove('bg-slate-800', 'text-yellow-400', 'hover:bg-slate-700');
+                themeToggle.classList.add('bg-white', 'text-slate-700', 'hover:bg-gray-100', 'shadow-lg');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+                
+                inputs.forEach(input => {
+                    input.classList.remove('input-field-dark');
+                    input.classList.add('input-field-light');
+                });
+            }
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const eyeIcon = document.getElementById(inputId + '-eye');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                `;
+            } else {
+                input.type = 'password';
+                eyeIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                `;
+            }
+        }
+
+        // Form Handling
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const card = document.getElementById('loginCard');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.textContent = 'Iniciando sesión...';
+            btnSpinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('username', data.username);
+                    window.location.href = '/panel';
+                } else {
+                    card.classList.add('shake');
+                    setTimeout(() => card.classList.remove('shake'), 500);
+                    
+                    errorText.textContent = 'Usuario o contraseña incorrectos';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorText.textContent = 'Error de conexión. Intenta de nuevo.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Iniciar Sesión';
+                btnSpinner.classList.add('hidden');
+            }
+        });
+
+        // Initialize
+        initTheme();
+        
+        // Check for error parameter in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'true') {
+            document.getElementById('errorMessage').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

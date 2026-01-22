@@ -1,0 +1,46 @@
+datasources:
+  default:
+    url: jdbc:h2:mem:testDb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+    schema-generate: CREATE_DROP
+    dialect: H2
+
+jpa:
+  default:
+    packages:
+      - com.ixlab.domain
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        hbm2ddl:
+          auto: create-drop
+        show_sql: false
+
+micronaut:
+  application:
+    name: BuildBag-Test
+  test-resources:
+    enabled: false
+  security:
+    enabled: true
+    intercept-url-map:
+      - pattern: /api/auth/**
+        access:
+          - isAnonymous()
+    token:
+      jwt:
+        enabled: true
+        signatures:
+          secret:
+            generator:
+              secret: "test-secret-key-for-testing-purposes-only-256-bits"
+        generator:
+          access-token:
+            expiration: 3600
+
+logging:
+  level:
+    root: WARN
+    com.ixlab: DEBUG

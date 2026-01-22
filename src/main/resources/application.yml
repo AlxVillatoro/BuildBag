@@ -1,0 +1,104 @@
+micronaut:
+  application:
+    name: BuildBag
+  server:
+    port: 8080
+  router:
+    static-resources:
+      default:
+        enabled: true
+        mapping: /static/**
+        paths: classpath:static
+      assets:
+        enabled: true
+        mapping: /assets/**
+        paths: classpath:static/assets
+  views:
+    thymeleaf:
+      enabled: true
+  security:
+    enabled: true
+    intercept-url-map:
+      - pattern: /
+        http-method: GET
+        access:
+          - isAnonymous()
+      - pattern: /login
+        http-method: GET
+        access:
+          - isAnonymous()
+      - pattern: /register
+        http-method: GET
+        access:
+          - isAnonymous()
+      - pattern: /panel
+        http-method: GET
+        access:
+          - isAnonymous()
+      - pattern: /api/auth/**
+        access:
+          - isAnonymous()
+      - pattern: /static/**
+        access:
+          - isAnonymous()
+      - pattern: /assets/**
+        access:
+          - isAnonymous()
+      - pattern: /swagger/**
+        access:
+          - isAnonymous()
+      - pattern: /rapidoc/**
+        access:
+          - isAnonymous()
+      - pattern: /redoc/**
+        access:
+          - isAnonymous()
+      - pattern: /openapi/**
+        access:
+          - isAnonymous()
+    token:
+      jwt:
+        enabled: true
+        signatures:
+          secret:
+            generator:
+              secret: "${JWT_SECRET:replace-with-long-secret-change-this-please-at-least-256-bits}"
+        generator:
+          access-token:
+            expiration: 86400
+    redirect:
+      login-failure: /login?error=true
+      login-success: /panel
+
+datasources:
+  default:
+    url: jdbc:h2:file:./data/buildbag;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+    schema-generate: CREATE_DROP
+    dialect: H2
+
+jpa:
+  default:
+    packages: com.ixlab
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: update
+        dialect: org.hibernate.dialect.H2Dialect
+        show_sql: false
+
+endpoints:
+  openapi:
+    enabled: true
+    path: /openapi
+  swagger:
+    enabled: true
+    path: /swagger
+
+logging:
+  level:
+    root: INFO
+    com.ixlab: DEBUG
+    io.micronaut.security: DEBUG

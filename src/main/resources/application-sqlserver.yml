@@ -1,0 +1,17 @@
+datasources:
+  default:
+    url: jdbc:sqlserver://<HOST>:1433;databaseName=<DBNAME>
+    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: <username>
+    password: <password>
+    schema-generate: UPDATE
+    dialect: SQL_SERVER
+
+jpa:
+  default:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+micronaut:
+  environments: sqlserver

@@ -1,0 +1,17 @@
+datasources:
+  default:
+    url: jdbc:oracle:thin:@//<HOST>:1521/<SERVICE>
+    driverClassName: oracle.jdbc.OracleDriver
+    username: <username>
+    password: <password>
+    schema-generate: UPDATE
+    dialect: ORACLE
+
+jpa:
+  default:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle12cDialect
+
+micronaut:
+  environments: oracle

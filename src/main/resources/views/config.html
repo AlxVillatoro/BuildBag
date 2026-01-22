@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Panel de Configuración - BuildBag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'monospace'],
+                        'display': ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        'midnight': '#0a0e17',
+                        'slate-dark': '#111827',
+                        'electric': '#3b82f6',
+                        'electric-light': '#60a5fa',
+                        'emerald-accent': '#10b981',
+                        'amber-accent': '#f59e0b',
+                        'coral': '#f43f5e',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/config.css">
+</head>
+<body class="text-gray-100 min-h-screen dark" id="pageBody">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-card border-b border-blue-500/20">
+        <div class="max-w-full mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-electric to-blue-700 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 id="projectTitle" class="text-xl font-bold header-title">Generador de Configuración</h1>
+                        <p id="projectSubtitle" class="text-sm header-subtitle">.properties</p>
+                    </div>
+                </div>
+                
+                <!-- Configuration Selector -->
+                <div class="flex items-center gap-3">
+                    <label class="text-sm label-text">Categoría:</label>
+                    <select id="categoryFilterSelect" class="input-field px-3 py-2 rounded-lg text-sm min-w-[150px]">
+                        <option value="">-- Todas --</option>
+                    </select>
+                    <label class="text-sm label-text">Configuración:</label>
+                    <select id="configSelector" class="input-field px-3 py-2 rounded-lg text-sm min-w-[200px]">
+                        <option value="">-- Sin archivos --</option>
+                    </select>
+                    <button onclick="closeCurrentConfig()" id="btnCloseConfig" class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hidden" title="Cerrar configuración actual">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Cerrar
+                    </button>
+                    <button onclick="toggleHeaderActionsMenu()" id="btnHeaderActions" class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hidden" title="Acciones">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v.01M12 12v.01M12 18v.01"/>
+                        </svg>
+                        Acciones
+                    </button>
+                    <div id="headerActionsMenu" class="hidden absolute mt-2 right-6 top-[88px] glass-card header-menu rounded-xl border border-blue-500/20 shadow-2xl p-2 min-w-[220px] z-[60]">
+                        <button onclick="editCurrentConfig(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Editar Configuración</button>
+                        <button onclick="deleteCurrentConfig(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Eliminar Configuración</button>
+                        <div class="h-px bg-blue-500/20 my-1"></div>
+                        <button onclick="downloadConfigAsJson(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Exportar JSON</button>
+                        <button onclick="checkAllServices(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Verificar Servicios</button>
+                        <button onclick="previewProperties(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Vista Previa</button>
+                        <button onclick="downloadProperties(); closeHeaderActionsMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors text-sm">Descargar .properties</button>
+                    </div>
+                    <input type="file" id="fileInput" accept=".json,.properties" class="hidden" onchange="loadFileFromInput(event)">
+                </div>
+                <!-- User + Theme moved to sidebar footer -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex pt-24">
+        <!-- Sidebar -->
+        <aside class="sidebar fixed left-0 top-24 bottom-0 w-64 border-r border-blue-500/20 flex flex-col">
+            <nav class="p-4 flex-1 overflow-y-auto">
+                <div class="mb-6">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider mb-3 px-3 sidebar-title">Propiedades Globales</h3>
+                    <div id="globalCategoriesNav" class="space-y-1"></div>
+                </div>
+                <div id="domainsNavSection" class="border-t border-gray-700/50 pt-6">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider mb-3 px-3 sidebar-title">Configuración por Dominio</h3>
+                    <div class="sidebar-item px-3 py-2 rounded-lg cursor-pointer sidebar-link" onclick="scrollToSection('domains-section')">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-amber-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                            <span class="text-sm">Dominios</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <!-- Sidebar footer: theme + user/logout always at bottom -->
+            <div class="p-4 border-t border-blue-500/20 flex items-center justify-between gap-3">
+                <button onclick="toggleTheme()" class="btn-secondary p-2 rounded-lg" id="themeToggle" title="Cambiar tema">
+                    <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <svg id="moonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2 min-w-0">
+                    <span id="usernameDisplay" class="text-sm header-subtitle truncate"></span>
+                    <button onclick="logout()" class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-coral border-coral/40 hover:bg-coral/10 whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="ml-64 flex-1 p-8">
+            <!-- Imported/Dirty Config Banner (Save in DB) -->
+            <div id="saveBanner" class="hidden mb-6 glass-card rounded-2xl p-5 border border-blue-500/20">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Cambios pendientes</h3>
+                        <p id="saveBannerText" class="text-sm text-gray-400">Esta configuración es nueva o tiene cambios sin guardar.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="openSaveModal()" class="btn-primary px-5 py-2 rounded-lg text-sm font-semibold">Guardar en Base de Datos</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-icon">
+                    <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold mb-3 empty-title">No hay configuración cargada</h2>
+                <p class="text-lg mb-6 empty-subtitle max-w-md">Selecciona una configuración del selector o crea una nueva para comenzar a trabajar.</p>
+                <div class="flex gap-4">
+                    <button onclick="editCurrentConfig()" class="btn-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Crear Nueva Configuración
+                    </button>
+                    <button onclick="openFileDialog()" class="btn-secondary px-6 py-3 rounded-xl font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        Importar Archivo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Properties (hidden initially) -->
+            <section id="global-properties" class="hidden">
+                <div class="mb-8 flex items-start justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2 section-title">Propiedades Globales</h2>
+                        <p class="section-subtitle">Configuración general del portal que aplica a todos los dominios</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="expandAllCategories()" class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2" title="Expandir todas las categorías">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                            </svg>
+                            Expandir
+                        </button>
+                        <button onclick="collapseAllCategories()" class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2" title="Contraer todas las categorías">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
+                            </svg>
+                            Contraer
+                        </button>
+                    </div>
+                </div>
+                <div id="globalPropertiesContainer" class="space-y-8"></div>
+            </section>
+
+            <!-- Domain Properties (hidden initially) -->
+            <section id="domains-section" class="mt-16 hidden">
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-2 section-title">Configuración por Dominio</h2>
+                            <p class="section-subtitle">Cada dominio tiene su propia configuración independiente</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="removeDomain()" id="btnRemoveDomain" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 text-coral border-coral/40 hover:bg-coral/10" style="display: none;">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                </svg>
+                                Eliminar Dominio
+                            </button>
+                            <button onclick="addDomain()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Agregar Dominio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Domain Tabs -->
+                <div class="mb-6">
+                    <div id="domainTabs" class="flex gap-2 flex-wrap"></div>
+                </div>
+
+                <!-- Domain Content -->
+                <div id="domainPropertiesContainer" class="space-y-8"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closePreview()"></div>
+        <div class="absolute inset-8 glass-card rounded-2xl overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                <h3 id="previewTitle" class="text-lg font-semibold">Vista Previa - config.properties</h3>
+                <div class="flex items-center gap-3">
+                    <button onclick="copyToClipboard()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Copiar
+                    </button>
+                    <button onclick="closePreview()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto p-6">
+                <pre id="previewContent" class="preview-code text-sm p-6 rounded-xl overflow-auto h-full"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Configuration Modal -->
+    <div id="saveConfigModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeSaveModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="glass-card rounded-2xl overflow-hidden w-full max-w-lg">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                    <h3 class="text-lg font-semibold modal-title">Guardar Configuración</h3>
+                    <button onclick="closeSaveModal()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 label-text">Categoría</label>
+                        <div id="categorySelectContainer">
+                            <select id="categorySelect" class="input-field w-full px-4 py-3 rounded-xl" onchange="handleCategoryChange()">
+                                <option value="">-- Seleccionar categoría --</option>
+                                <option value="__new__">+ Crear nueva categoría</option>
+                            </select>
+                        </div>
+                        <input type="text" id="newCategoryInput" class="input-field w-full px-4 py-3 rounded-xl mt-2 hidden" placeholder="Nombre de la nueva categoría">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 label-text">Subcategoría (versión o identificador)</label>
+                        <input type="text" id="subcategoryInput" class="input-field w-full px-4 py-3 rounded-xl" placeholder="Ej: v1.0.0, producción, desarrollo">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 label-text">Nombre de la configuración</label>
+                        <input type="text" id="configNameInput" class="input-field w-full px-4 py-3 rounded-xl" placeholder="Nombre descriptivo">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-700">
+                    <button onclick="closeSaveModal()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">Cancelar</button>
+                    <button onclick="saveConfigurationToDb()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="toast-card glass-card rounded-xl px-6 py-4 flex items-center gap-3 shadow-2xl">
+            <svg id="toastIcon" class="w-5 h-5 text-emerald-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span id="toastMessage" class="text-sm font-medium toast-message"></span>
+        </div>
+    </div>
+
+    <!-- JSON Editor Modal -->
+    <div id="jsonEditorModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="absolute inset-4 lg:inset-8 glass-card editor-modal-bg rounded-2xl overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700 editor-modal-header">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold modal-title">Editor de Configuración</h3>
+                        <p id="jsonEditorSubtitle" class="text-sm text-gray-400">Configura las propiedades del archivo</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1 border-r border-gray-700 pr-3 mr-1">
+                        <button onclick="expandAllEditorCategories()" class="btn-secondary px-2 py-2 rounded-lg text-sm" title="Expandir todas">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                            </svg>
+                        </button>
+                        <button onclick="collapseAllEditorCategories()" class="btn-secondary px-2 py-2 rounded-lg text-sm" title="Contraer todas">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <button onclick="addNewPropertyToEditor()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nueva Propiedad
+                    </button>
+                    <button onclick="addNewCategoryToEditor()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        Nueva Categoría
+                    </button>
+                    <button onclick="saveAndApplyEditorConfig()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Aplicar y Guardar
+                    </button>
+                    <button onclick="closeJsonEditor()" class="text-gray-400 hover:text-white transition-colors p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Project Info -->
+            <div class="px-6 py-4 border-b border-gray-700/50 editor-project-info">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-xs label-text mb-1">Categoría</label>
+                        <select id="editorCategorySelect" class="input-field w-full px-3 py-2 rounded-lg text-sm" onchange="handleEditorCategoryChange()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="__new__">+ Nueva categoría</option>
+                        </select>
+                        <input type="text" id="editorNewCategory" class="input-field w-full px-3 py-2 rounded-lg text-sm mt-2 hidden" placeholder="Nombre de nueva categoría">
+                    </div>
+                    <div>
+                        <label class="block text-xs label-text mb-1">Subcategoría</label>
+                        <input type="text" id="editorSubcategory" class="input-field w-full px-3 py-2 rounded-lg text-sm" placeholder="Ej: v1.0.0, Producción">
+                    </div>
+                    <div>
+                        <label class="block text-xs label-text mb-1">Nombre de Configuración</label>
+                        <input type="text" id="editorProjectName" class="input-field w-full px-3 py-2 rounded-lg text-sm" placeholder="Nombre del proyecto">
+                    </div>
+                    <div>
+                        <label class="block text-xs label-text mb-1">Versión</label>
+                        <input type="text" id="editorProjectVersion" class="input-field w-full px-3 py-2 rounded-lg text-sm" placeholder="1.0.0" value="1.0.0">
+                    </div>
+                    <div>
+                        <label class="block text-xs label-text mb-1 flex items-center gap-1">
+                            Patrón de Dominio
+                            <span class="tooltip-trigger relative">
+                                <svg class="w-3 h-3 text-gray-500 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="tooltip absolute bottom-full left-0 mb-2 w-64 p-2 glass-card rounded text-xs z-50">
+                                    Define qué parte de la llave indica que es una propiedad de dominio.<br>
+                                    Usa {N} como placeholder del número.<br>
+                                    Ej: "domain{N}" detecta domain1, domain2, etc.
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="editorDomainKeyPattern" class="input-field w-full px-3 py-2 rounded-lg text-sm" placeholder="domain{N}">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Properties List -->
+            <div class="flex-1 overflow-auto p-6">
+                <div id="jsonEditorContent" class="space-y-4">
+                    <!-- Properties will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== THEME MANAGEMENT ====================
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function applyTheme(theme) {
+            const body = document.getElementById('pageBody');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const themeToggle = document.getElementById('themeToggle');
+
+            if (theme === 'dark') {
+                // Add dark classes
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                document.body.classList.add('dark');
+                document.body.classList.remove('light');
+                body.classList.add('dark');
+                body.classList.remove('light');
+                
+                // Background
+                body.style.background = 'linear-gradient(135deg, #0a0e17 0%, #1a1f2e 50%, #0f172a 100%)';
+                
+                // Icons
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+                
+                // Theme toggle button
+                if (themeToggle) {
+                    themeToggle.style.background = '#1e293b';
+                    themeToggle.style.color = '#fbbf24';
+                    themeToggle.style.border = 'none';
+                }
+            } else {
+                // Add light classes
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                document.body.classList.remove('dark');
+                document.body.classList.add('light');
+                body.classList.remove('dark');
+                body.classList.add('light');
+                
+                // Background
+                body.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%)';
+                
+                // Icons
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+                
+                // Theme toggle button
+                if (themeToggle) {
+                    themeToggle.style.background = '#f1f5f9';
+                    themeToggle.style.color = '#475569';
+                    themeToggle.style.border = '1px solid #cbd5e1';
+                }
+            }
+        }
+
+        // ==================== AUTH & API ====================
+        let accessToken = localStorage.getItem('accessToken');
+        let currentUser = localStorage.getItem('username');
+        let currentConfigId = null;
+        let categories = [];
+        let configurations = [];
+        let isConfigLoaded = false;
+        let pendingImportedConfig = null;
+        let currentConfigOrigin = 'none'; // 'none' | 'import' | 'db'
+        let isConfigDirty = false;
+        let suppressDirtyTracking = false;
+
+        function setConfigDirty(dirty) {
+            isConfigDirty = dirty;
+            updateSaveButtonVisibility();
+        }
+
+        function updateSaveButtonVisibility() {
+            const banner = document.getElementById('saveBanner');
+            const bannerText = document.getElementById('saveBannerText');
+            const shouldShow = currentConfigOrigin === 'import' || (currentConfigOrigin === 'db' && isConfigDirty);
+            if (bannerText) {
+                bannerText.textContent = currentConfigOrigin === 'import'
+                    ? 'Esta configuración fue importada y aún no está guardada en la base de datos.'
+                    : 'Esta configuración fue modificada. Guarda los cambios en la base de datos.';
+            }
+            if (banner) banner.classList.toggle('hidden', !shouldShow);
+        }
+
+        function hasDomainPropertiesInCurrentConfig() {
+            try {
+                if (typeof configData === 'undefined' || !configData) return false;
+                if (!Array.isArray(configData.domainProperties)) return false;
+                return configData.domainProperties.some(cat => Array.isArray(cat.properties) && cat.properties.length > 0);
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function updateDomainSectionVisibility() {
+            const domainsSection = document.getElementById('domains-section');
+            const domainsNav = document.getElementById('domainsNavSection');
+            const shouldShow = hasDomainPropertiesInCurrentConfig();
+            if (domainsSection) domainsSection.classList.toggle('hidden', !shouldShow);
+            if (domainsNav) domainsNav.classList.toggle('hidden', !shouldShow);
+        }
+
+        function toggleHeaderActionsMenu() {
+            const menu = document.getElementById('headerActionsMenu');
+            if (!menu) return;
+            menu.classList.toggle('hidden');
+        }
+
+        function closeHeaderActionsMenu() {
+            const menu = document.getElementById('headerActionsMenu');
+            if (menu) menu.classList.add('hidden');
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        async function checkAuth() {
+            // First check if token exists
+            if (!accessToken) {
+                window.location.href = '/login';
+                return false;
+            }
+            
+            // Validate token by calling the validate endpoint
+            try {
+                const response = await fetch('/api/auth/validate', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401 || !response.ok) {
+                    // Token is invalid or expired
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('username');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                // Token is valid - update username from server response
+                const data = await response.json();
+                currentUser = data.username || currentUser;
+                localStorage.setItem('username', currentUser);
+                document.getElementById('usernameDisplay').textContent = currentUser;
+                return true;
+            } catch (error) {
+                console.error('Error validating token:', error);
+                // On network error, clear token and redirect to login
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('username');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('username');
+            window.location.href = '/login';
+        }
+
+        // ==================== API CALLS ====================
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                if (response.ok) {
+                    categories = await response.json();
+                    updateCategorySelect();
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadConfigurations() {
+            try {
+                const response = await fetch('/api/configs/with-categories', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+                
+                if (response.ok) {
+                    const categoriesWithConfigs = await response.json();
+                    updateConfigSelector(categoriesWithConfigs);
+                }
+            } catch (error) {
+                console.error('Error loading configurations:', error);
+            }
+        }
+
+        let allCategoriesWithConfigs = [];
+        
+        function updateConfigSelector(categoriesWithConfigs) {
+            allCategoriesWithConfigs = categoriesWithConfigs;
+            
+            // Update category filter
+            const categoryFilter = document.getElementById('categoryFilterSelect');
+            categoryFilter.innerHTML = '<option value="">-- Todas --</option>';
+            
+            categoriesWithConfigs.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                categoryFilter.appendChild(option);
+            });
+            
+            // Update config selector
+            filterConfigsByCategory();
+        }
+        
+        function filterConfigsByCategory() {
+            const categoryFilter = document.getElementById('categoryFilterSelect');
+            const selector = document.getElementById('configSelector');
+            const selectedCategory = categoryFilter.value;
+            
+            selector.innerHTML = '<option value="">-- Seleccionar --</option>';
+            
+            let hasConfigs = false;
+            
+            allCategoriesWithConfigs.forEach(cat => {
+                // Filter by category if one is selected
+                if (selectedCategory && cat.id.toString() !== selectedCategory) {
+                    return;
+                }
+                
+                if (cat.configurations && cat.configurations.length > 0) {
+                    hasConfigs = true;
+                    
+                    if (!selectedCategory) {
+                        // Show optgroup when showing all categories
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = cat.name;
+                        
+                        cat.configurations.forEach(config => {
+                            const option = document.createElement('option');
+                            option.value = config.id;
+                            option.textContent = config.subcategory ? `${config.name} (${config.subcategory})` : config.name;
+                            optgroup.appendChild(option);
+                        });
+                        
+                        selector.appendChild(optgroup);
+                    } else {
+                        // Show flat list when category is selected
+                        cat.configurations.forEach(config => {
+                            const option = document.createElement('option');
+                            option.value = config.id;
+                            option.textContent = config.subcategory ? `${config.name} (${config.subcategory})` : config.name;
+                            selector.appendChild(option);
+                        });
+                    }
+                }
+            });
+            
+            if (!hasConfigs) {
+                selector.innerHTML = '<option value="">-- Sin archivos --</option>';
+            }
+        }
+
+        function updateCategorySelect() {
+            const select = document.getElementById('categorySelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Seleccionar categoría --</option>';
+            select.innerHTML += '<option value="__new__">+ Crear nueva categoría</option>';
+            
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function updateEditorCategorySelect() {
+            const select = document.getElementById('editorCategorySelect');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">-- Seleccionar --</option>';
+            select.innerHTML += '<option value="__new__">+ Nueva categoría</option>';
+            
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function handleEditorCategoryChange() {
+            const select = document.getElementById('editorCategorySelect');
+            const newCategoryInput = document.getElementById('editorNewCategory');
+            
+            if (select.value === '__new__') {
+                newCategoryInput.classList.remove('hidden');
+                newCategoryInput.focus();
+            } else {
+                newCategoryInput.classList.add('hidden');
+            }
+        }
+
+        function handleCategoryChange() {
+            const select = document.getElementById('categorySelect');
+            const newCategoryInput = document.getElementById('newCategoryInput');
+            
+            if (select.value === '__new__') {
+                newCategoryInput.classList.remove('hidden');
+                newCategoryInput.focus();
+            } else {
+                newCategoryInput.classList.add('hidden');
+            }
+        }
+
+        async function loadConfigurationFromApi(configId) {
+            try {
+                const response = await fetch(`/api/configs/${configId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const config = await response.json();
+                    const jsonContent = atob(config.contentBase64);
+                    const configDataParsed = JSON.parse(jsonContent);
+                    
+                    currentConfigId = configId;
+                    
+                    // Use loadConfigFromData from config.js to load the configuration
+                    if (typeof loadConfigFromData === 'function') {
+                        suppressDirtyTracking = true;
+                        loadConfigFromData(configDataParsed);
+                        suppressDirtyTracking = false;
+                    }
+                    
+                    currentConfigOrigin = 'db';
+                    setConfigDirty(false);
+                    showConfigUI();
+                    showToast(`Configuración "${configDataParsed.projectName || 'Sin nombre'}" cargada correctamente`);
+                } else {
+                    showToast('Error al cargar la configuración', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                showToast('Error al cargar la configuración', 'error');
+            }
+        }
+        
+        // Function to open editor (for creating or editing)
+        function editCurrentConfig() {
+            updateEditorCategorySelect();
+            
+            if (isConfigLoaded && typeof openJsonEditorWithCurrentConfig === 'function') {
+                // Edit existing configuration
+                openJsonEditorWithCurrentConfig();
+            } else {
+                // Create new configuration - open empty editor
+                if (typeof openJsonEditorEmpty === 'function') {
+                    openJsonEditorEmpty();
+                } else if (typeof openJsonEditor === 'function') {
+                    // Fallback: open editor with empty config
+                    openJsonEditor({
+                        projectName: '',
+                        projectDescription: '',
+                        version: '1.0.0',
+                        outputFileName: 'config.properties',
+                        domainKeyPattern: 'domain{N}',
+                        globalProperties: [],
+                        domainProperties: []
+                    }, 'nueva-config.json');
+                }
+            }
+            
+            document.getElementById('jsonEditorModal').classList.remove('hidden');
+        }
+        
+     	// Function to delete current configuration
+        async function deleteCurrentConfig() {
+     		
+        	const id = parseInt(document.getElementById('configSelector').value);
+
+            if (!id) {
+                showToast('No hay configuración seleccionada', 'error');
+                return;
+            }
+     		
+            try {
+                
+                const response = await fetch(`/api/configs/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Configuración eliminada exitosamente');
+                    currentConfigOrigin = 'none';
+                    await loadCategories();
+                    await loadConfigurations();
+                    closeCurrentConfig();
+                } else if (response.status === 404) {
+                    showToast('Configuración no encontrada', 'error');
+                } else if (response.status === 401) {
+                    showToast('No autorizado', 'error');
+                } else {
+                    showToast('Error al eliminar la configuración', 'error');
+                }
+            } catch (error) {
+                console.error('Error delete configuration:', error);
+                showToast('Error al eliminar la configuración', 'error');
+            }
+        }
+
+        function showConfigUI() {
+            isConfigLoaded = true;
+            const empty = document.getElementById('emptyState');
+            const global = document.getElementById('global-properties');
+            if (empty) empty.classList.add('hidden');
+            if (global) global.classList.remove('hidden');
+            
+            // Show action buttons
+            const btnClose = document.getElementById('btnCloseConfig');
+            const btnActions = document.getElementById('btnHeaderActions');
+            if (btnClose) btnClose.classList.remove('hidden');
+            if (btnActions) btnActions.classList.remove('hidden');
+
+            updateSaveButtonVisibility();
+            updateDomainSectionVisibility();
+        }
+
+        function hideConfigUI() {
+            isConfigLoaded = false;
+            currentConfigId = null;
+            currentConfigOrigin = 'none';
+            setConfigDirty(false);
+            const empty = document.getElementById('emptyState');
+            const global = document.getElementById('global-properties');
+            const domainsSection = document.getElementById('domains-section');
+            const domainsNav = document.getElementById('domainsNavSection');
+            if (empty) empty.classList.remove('hidden');
+            if (global) global.classList.add('hidden');
+            if (domainsSection) domainsSection.classList.add('hidden');
+            if (domainsNav) domainsNav.classList.add('hidden');
+            closeHeaderActionsMenu();
+            
+            // Hide action buttons
+            const btnClose = document.getElementById('btnCloseConfig');
+            const btnActions = document.getElementById('btnHeaderActions');
+            if (btnClose) btnClose.classList.add('hidden');
+            if (btnActions) btnActions.classList.add('hidden');
+            
+            // Reset selector
+            document.getElementById('configSelector').value = '';
+        }
+
+        function closeCurrentConfig() {
+            hideConfigUI();
+            // Clear any loaded configuration data
+            if (typeof clearConfiguration === 'function') {
+                clearConfiguration();
+            }
+        }
+
+        function applyConfiguration(configData) {
+            // This function will be implemented in config.js
+            if (typeof loadConfigFromData === 'function') {
+                loadConfigFromData(configData);
+            }
+        }
+
+        // ==================== SAVE MODAL ====================
+        function openSaveModal() {
+            document.getElementById('saveConfigModal').classList.remove('hidden');
+            updateCategorySelect();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveConfigModal').classList.add('hidden');
+            document.getElementById('newCategoryInput').classList.add('hidden');
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('categorySelect').value = '';
+            document.getElementById('subcategoryInput').value = '';
+            document.getElementById('configNameInput').value = '';
+        }
+
+        async function saveConfigurationToDb() {
+            const categorySelect = document.getElementById('categorySelect');
+            const newCategoryInput = document.getElementById('newCategoryInput');
+            const subcategoryInput = document.getElementById('subcategoryInput');
+            const configNameInput = document.getElementById('configNameInput');
+            
+            let categoryId = null;
+            let categoryName = null;
+            
+            if (categorySelect.value === '__new__') {
+                categoryName = newCategoryInput.value.trim();
+                if (!categoryName) {
+                    showToast('Ingresa un nombre para la categoría', 'error');
+                    return;
+                }
+            } else if (categorySelect.value) {
+                categoryId = parseInt(categorySelect.value);
+            } else {
+                showToast('Selecciona una categoría', 'error');
+                return;
+            }
+            
+            const subcategory = subcategoryInput.value.trim();
+            const configName = configNameInput.value.trim();
+            
+            if (!configName) {
+                showToast('Ingresa un nombre para la configuración', 'error');
+                return;
+            }
+            
+            // Get current configuration JSON
+            let configJson;
+            if (typeof getConfigJsonForSave === 'function') {
+                configJson = getConfigJsonForSave();
+            } else if (typeof getCurrentConfigJson === 'function') {
+                // Fallback for older implementations
+                configJson = getCurrentConfigJson();
+            } else {
+                showToast('No hay configuración para guardar', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/configs', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        name: configName,
+                        subcategory: subcategory,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        json: JSON.stringify(configJson)
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast('Configuración guardada exitosamente');
+                    closeSaveModal();
+                    pendingImportedConfig = null;
+                    currentConfigOrigin = 'db';
+                    setConfigDirty(false);
+                    await loadCategories();
+                    await loadConfigurations();
+                    
+                    // Select the newly created config
+                    const data = await response.json();
+                    if (data.id) {
+                        document.getElementById('configSelector').value = data.id;
+                        currentConfigId = data.id;
+                    }
+                } else {
+                    showToast('Error al guardar la configuración', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                showToast('Error al guardar la configuración', 'error');
+            }
+        }
+
+        // ==================== FILE IMPORT ====================
+        function openFileDialog() {
+            document.getElementById('fileInput').click();
+        }
+
+        function buildConfigJsonFromProperties(content, fileName) {
+            // Prefer the shared parser in config.js (it also detects domain properties)
+            let parsedProps = null;
+            if (typeof parsePropertiesFileForEditor === 'function') {
+                parsedProps = parsePropertiesFileForEditor(content, fileName);
+            }
+
+            if (!parsedProps || parsedProps.length === 0) {
+                throw new Error('No se pudieron leer propiedades del archivo');
+            }
+
+            const projectName = fileName.replace(/\.properties$/i, '').replace(/[-_]/g, ' ');
+            const domainPattern = typeof getDomainKeyPattern === 'function' ? getDomainKeyPattern() : 'domain{N}';
+            const toTemplate = (key) => {
+                if (typeof convertToDomainTemplate === 'function') return convertToDomainTemplate(key, domainPattern);
+                return key.replace(/\d+/g, '{N}');
+            };
+
+            const globalMap = new Map();
+            const domainMap = new Map();
+
+            parsedProps.forEach((p) => {
+                const categoryName = typeof formatCategoryName === 'function' ? formatCategoryName(p.category || 'General') : (p.category || 'General');
+                const propData = {
+                    key: p.isDomain ? toTemplate(p.key) : p.key,
+                    label: p.label || p.key,
+                    type: p.type || 'text',
+                    default: p.default ?? '',
+                    required: !!p.required,
+                    needsConfirmation: p.needsConfirmation !== false,
+                    description: p.description || `Propiedad: ${p.key}`
+                };
+                if (p.booleanType) propData.booleanType = p.booleanType;
+                if (p.checkService) propData.checkService = p.checkService;
+
+                const map = p.isDomain ? domainMap : globalMap;
+                if (!map.has(categoryName)) {
+                    map.set(categoryName, {
+                        category: categoryName,
+                        ...(p.isDomain ? {} : { icon: 'settings' }),
+                        properties: []
+                    });
+                }
+                map.get(categoryName).properties.push(propData);
+            });
+
+            const globalCategories = Array.from(globalMap.values());
+            const domainCategories = Array.from(domainMap.values());
+
+            return {
+                projectName: projectName.charAt(0).toUpperCase() + projectName.slice(1),
+                projectDescription: `Configuración importada desde ${fileName}`,
+                version: '1.0.0',
+                outputFileName: fileName,
+                domainKeyPattern: domainPattern,
+                mexicoStates: typeof getDefaultMexicoStates === 'function' ? getDefaultMexicoStates() : [],
+                paymentPeriods: typeof getDefaultPaymentPeriods === 'function' ? getDefaultPaymentPeriods() : [],
+                globalProperties: globalCategories.length > 0 ? globalCategories : [{
+                    category: 'Propiedades Generales',
+                    icon: 'settings',
+                    properties: []
+                }],
+                domainProperties: domainCategories.length > 0 ? domainCategories : [{
+                    category: 'Configuración del Dominio',
+                    properties: []
+                }]
+            };
+        }
+
+        function loadFileFromInput(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                try {
+                    let importedConfig;
+                    if (file.name.toLowerCase().endsWith('.json')) {
+                        importedConfig = JSON.parse(content);
+                    } else if (file.name.toLowerCase().endsWith('.properties')) {
+                        importedConfig = buildConfigJsonFromProperties(content, file.name);
+                    } else {
+                        showToast('Formato no soportado. Usa .json o .properties', 'error');
+                        return;
+                    }
+
+                    // Update config.js current filename if present
+                    if (typeof currentConfigFile !== 'undefined') {
+                        currentConfigFile = file.name;
+                    }
+
+                    // Load into main panel always (never leave emptyState visible)
+                    suppressDirtyTracking = true;
+                    try {
+                        if (typeof loadConfigFromData === 'function') {
+                            loadConfigFromData(importedConfig);
+                        } else {
+                            console.error('loadConfigFromData is not available');
+                        }
+                    } catch (applyErr) {
+                        console.error('Error applying imported configuration:', applyErr);
+                        showToast('Archivo importado, pero hubo un problema al renderizar algunas secciones. Revisa consola.', 'info');
+                    } finally {
+                        suppressDirtyTracking = false;
+                        currentConfigId = null;
+                        currentConfigOrigin = 'import';
+                        setConfigDirty(false);
+                        showConfigUI();
+                    }
+
+                    showToast('Archivo importado. Puedes editar la configuración o guardar en la base de datos.', 'info');
+                    
+                } catch (error) {
+                    console.error('Error parsing file:', error);
+                    showToast('Error al procesar el archivo', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function parsePropertiesToJson(content) {
+            // Basic properties to JSON conversion
+            const lines = content.split('\n');
+            const properties = [];
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (line && !line.startsWith('#')) {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key) {
+                        properties.push({
+                            key: key.trim(),
+                            defaultValue: valueParts.join('=').trim(),
+                            type: 'text',
+                            required: false,
+                            category: 'General'
+                        });
+                    }
+                }
+            });
+            
+            return {
+                projectName: 'Imported Configuration',
+                properties: properties
+            };
+        }
+
+        // ==================== TOAST ====================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMessage.textContent = message;
+            
+            if (type === 'error') {
+                toastIcon.classList.remove('text-emerald-accent');
+                toastIcon.classList.add('text-coral');
+                toastIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+            } else {
+                toastIcon.classList.remove('text-coral');
+                toastIcon.classList.add('text-emerald-accent');
+                toastIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
+            }
+            
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // ==================== CONFIG SELECTOR ====================
+        document.getElementById('categoryFilterSelect').addEventListener('change', function() {
+            filterConfigsByCategory();
+        });
+        
+        document.getElementById('configSelector').addEventListener('change', function() {
+            const configId = this.value;
+            if (configId) {
+                loadConfigurationFromApi(configId);
+            } else {
+                hideConfigUI();
+            }
+        });
+
+        // Track changes in the main panel to show the Save button when needed
+        document.addEventListener('input', function(e) {
+            if (!isConfigLoaded || suppressDirtyTracking) return;
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            if (e.target.closest('#global-properties') || e.target.closest('#domains-section')) {
+                setConfigDirty(true);
+            }
+        }, true);
+
+        document.addEventListener('change', function(e) {
+            if (!isConfigLoaded || suppressDirtyTracking) return;
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            if (e.target.closest('#global-properties') || e.target.closest('#domains-section')) {
+                setConfigDirty(true);
+            }
+        }, true);
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            if (await checkAuth()) {
+                initTheme();
+                await loadCategories();
+                await loadConfigurations();
+            }
+        }
+
+        init();
+    </script>
+    <script src="/static/config.js"></script>
+</body>
+</html>
+

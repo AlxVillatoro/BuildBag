@@ -176,4 +176,4 @@ Edita `src/main/resources/application.yml` para configurar:
 
 ## Licencia
 
-MIT License
+Apache-2.0

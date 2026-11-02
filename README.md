@@ -34,8 +34,9 @@ En "Editar estructura", propiedades y categorías se reordenan arrastrando el as
 | En el archivo | En el panel |
 |---|---|
 | Comentario justo encima de una propiedad | Descripción de la propiedad |
-| Título entre líneas `# -----`, o comentario corto aislado por líneas en blanco | Categoría |
-| Comentario largo aislado | Se añade a la descripción de la siguiente propiedad |
+| Comentario justo debajo de una propiedad, o que apunta hacia ella (`# <- ...`, `# ^ ...`) | Se añade a la descripción de esa propiedad |
+| Título entre líneas `# -----`, o título corto con líneas en blanco antes y después | Categoría |
+| Cualquier otro comentario aislado | Se añade a la descripción de la siguiente propiedad |
 | Claves `app.domain1.x`, `app.domain2.x` | Una propiedad por dominio, con el valor de cada uno |
 
 Los archivos generados siguen este mismo formato, así que se pueden volver a importar sin perder comentarios ni categorías. El patrón de dominio (`domain{N}` por defecto) se cambia en los detalles de la configuración.

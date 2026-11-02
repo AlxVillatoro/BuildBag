@@ -40,6 +40,55 @@ test('banners and short standalone comments open sections', () => {
     assert.equal(entries[1].section, 'Correo');
 });
 
+test('a remark about the previous property does not become a category', () => {
+    const source = [
+        'portal.languages.language1=es',
+        'portal.languages.language2=en',
+        '# <- otro ejemplo para otro idioma',
+        '',
+        'hrvertical.portalfirma.url=https://x',
+        'app.domain1.host=uno',
+        'app.domain2.host=dos'
+    ].join('\n');
+    const { entries } = parseProperties(source);
+    assert.equal(entries[1].description, 'otro ejemplo para otro idioma');
+    assert.ok(entries.every(entry => entry.section === null));
+
+    const config = configFromProperties(source, 'portal.properties');
+    const titles = [...config.globalProperties, ...config.domainProperties].map(section => section.category);
+    assert.deepEqual(titles, ['Portal - Languages', 'Hrvertical - Portalfirma', 'App - Domain']);
+});
+
+test('comments pointing back belong to the property above, wherever they are', () => {
+    const separated = parseProperties('a=1\n\n# <- nota de a\n\nb=2\n').entries;
+    assert.equal(separated[0].description, 'nota de a');
+    assert.equal(separated[1].description, '');
+    assert.equal(separated[1].section, null);
+
+    const attached = parseProperties('a=1\n# ^ nota de a\n# Explica b\nb=2\n').entries;
+    assert.equal(attached[0].description, 'nota de a');
+    assert.equal(attached[1].description, 'Explica b');
+
+    assert.equal(parseProperties('# <- sin propiedad previa\n\na=1\n').entries[0].section, null);
+});
+
+test('a comment right below a property adds to it instead of opening a section', () => {
+    const { entries } = parseProperties('# Uno\na=1\n# Solo aplica en pruebas\n\nb=2\n');
+    assert.equal(entries[0].description, 'Uno\nSolo aplica en pruebas');
+    assert.equal(entries[1].section, null);
+});
+
+test('only short title-like comments with blank lines around them open a section', () => {
+    const section = comment => parseProperties(`a=1\n\n# ${comment}\n\nb=2\n`).entries[1];
+    assert.equal(section('Base de datos').section, 'Base de datos');
+    assert.equal(section('Ñandú 2').section, 'Ñandú 2');
+
+    const sentence = section('Revisar antes de publicar.');
+    assert.equal(sentence.section, null);
+    assert.equal(sentence.description, 'Revisar antes de publicar.');
+    assert.equal(section('(ver manual)').section, null);
+});
+
 test('a long standalone comment is kept for the next property', () => {
     const long = 'Este comentario es demasiado largo para ser el título de una sección dentro del archivo';
     const { entries } = parseProperties(`a=1\n\n# ${long}\n\nb=2\n`);

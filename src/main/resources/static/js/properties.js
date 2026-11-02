@@ -11,6 +11,8 @@ const INLINE_BANNER = /^[-=*#_~]{2,}\s*(.+?)\s*[-=*#_~]{2,}$/;
 const COMMENTED_OUT_PROPERTY = /^[\w.[\]{}-]+\s*[=:]/;
 const GENERATED_DOMAIN_BANNER = /^dominio\s+\d+$/i;
 const MAX_SECTION_TITLE = 60;
+// A comment that points back, such as "<- otro ejemplo", explains the property above it
+const POINTS_BACK = /^(<-+|<=+|\^+|←|↑)\s*/;
 
 // ---------------------------------------------------------------- reading
 
@@ -66,9 +68,18 @@ function readCommentBlock(lines) {
     return { banner: null, title: null, text: lines.filter(Boolean) };
 }
 
+function looksLikeSectionTitle(line) {
+    return line.length <= MAX_SECTION_TITLE
+        && /^[\p{L}\p{N}]/u.test(line)
+        && !line.endsWith('.')
+        && !COMMENTED_OUT_PROPERTY.test(line);
+}
+
 /**
- * Reads a .properties file. A comment right above a property describes it; a banner, or a short comment standing on
- * its own, opens a section. A longer comment on its own is kept for the next property so no explanation is lost.
+ * Reads a .properties file. A comment right above a property describes it. A comment right below a property, or one
+ * pointing back at it ("<- ..."), adds to that property. A banner opens a section, and so does a short title-like
+ * comment with blank lines on both sides. Any other comment on its own is kept for the next property, so no
+ * explanation is lost.
  */
 export function parseProperties(content) {
     const lines = content.replace(/^\uFEFF/, '').split(/\r\n|\r|\n/);
@@ -77,9 +88,23 @@ export function parseProperties(content) {
     let section = null;
     let comments = [];
     let carried = [];
+    let previous = null;
+    let afterProperty = false;
+    let commentFollowsProperty = false;
 
     const openSection = title => {
         section = GENERATED_DOMAIN_BANNER.test(title) ? null : title;
+    };
+
+    const addToPrevious = text => {
+        if (text.length > 0) previous.description = [previous.description, ...text].filter(Boolean).join('\n');
+    };
+
+    /** Hands the lines pointing back to the previous property and returns the others. */
+    const withoutBackReferences = text => {
+        if (!previous) return text;
+        addToPrevious(text.filter(line => POINTS_BACK.test(line)).map(line => line.replace(POINTS_BACK, '')));
+        return text.filter(line => !POINTS_BACK.test(line));
     };
 
     const closeFloatingComment = () => {
@@ -91,21 +116,26 @@ export function parseProperties(content) {
 
         if (isFileStart && lineCount > 1) {
             header = block.banner || block.text;
-        } else if (block.title) {
-            openSection(block.title);
-        } else if (block.text.length === 1 && block.text[0].length <= MAX_SECTION_TITLE
-            && !COMMENTED_OUT_PROPERTY.test(block.text[0])) {
-            openSection(block.text[0]);
-        } else if (!block.text.every(line => COMMENTED_OUT_PROPERTY.test(line))) {
-            carried.push(...block.text);
+            return;
         }
+        if (block.title) {
+            openSection(block.title);
+            return;
+        }
+        const text = withoutBackReferences(block.text);
+        if (text.length === 0 || text.every(line => COMMENTED_OUT_PROPERTY.test(line))) return;
+        if (previous && commentFollowsProperty) addToPrevious(text);
+        else if (text.length === 1 && looksLikeSectionTitle(text[0])) openSection(text[0]);
+        else carried.push(...text);
     };
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trimStart();
         if (!line) {
             closeFloatingComment();
+            afterProperty = false;
         } else if (line[0] === '#' || line[0] === '!') {
+            if (comments.length === 0) commentFollowsProperty = afterProperty;
             comments.push(line.slice(1).trim());
         } else {
             let logical = line;
@@ -114,11 +144,15 @@ export function parseProperties(content) {
             }
             const block = readCommentBlock(comments);
             if (block.title) openSection(block.title);
-            const description = [...carried, ...block.text].join('\n');
+            const description = [...carried, ...withoutBackReferences(block.text)].join('\n');
             comments = [];
             carried = [];
             const { key, value } = splitKeyValue(logical);
-            if (key) entries.set(key, { key, value, description, section });
+            if (key) {
+                previous = { key, value, description, section };
+                entries.set(key, previous);
+            }
+            afterProperty = true;
         }
     }
     return { entries: [...entries.values()], header: header || [] };

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "categories", indexes = @Index(name = "idx_categories_user", columnList = "user_id"))
 public class Category implements Serializable {
 
     @Id

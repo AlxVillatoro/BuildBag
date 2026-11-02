@@ -1,51 +1,48 @@
 package com.ixlab.controller;
 
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import io.micronaut.views.View;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+/** Serves the page shells; the panel verifies the JWT from JavaScript through /api/auth/validate. */
 @Controller
+@Secured(SecurityRule.IS_ANONYMOUS)
 public class ViewController {
 
+    @Get("/")
+    public HttpResponse<?> index() {
+        return HttpResponse.seeOther(URI.create("/login"));
+    }
+
     @Get("/login")
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    @View("login")
+    @View("auth")
     public Map<String, Object> login() {
-        Map<String, Object> model = new HashMap<>();
-        model.put("title", "Iniciar Sesión - BuildBag");
-        return model;
+        return model("Iniciar sesión - BuildBag", "login");
     }
 
     @Get("/register")
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    @View("register")
+    @View("auth")
     public Map<String, Object> register() {
-        Map<String, Object> model = new HashMap<>();
-        model.put("title", "Registrarse - BuildBag");
-        return model;
-    }
-
-    @Get("/")
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    @View("login")
-    public Map<String, Object> index() {
-        Map<String, Object> model = new HashMap<>();
-        model.put("title", "Iniciar Sesión - BuildBag");
-        return model;
+        return model("Crear cuenta - BuildBag", "register");
     }
 
     @Get("/panel")
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    @View("config")
+    @View("panel")
     public Map<String, Object> panel() {
+        return model("Panel de configuración - BuildBag", "panel");
+    }
+
+    private Map<String, Object> model(String title, String mode) {
         Map<String, Object> model = new HashMap<>();
-        model.put("title", "Panel de Configuración - BuildBag");
+        model.put("title", title);
+        model.put("mode", mode);
         return model;
     }
 }
-

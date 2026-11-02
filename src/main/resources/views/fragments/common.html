@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- connect-src stays open because "Verificar" tests the URLs the user configures -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data:; connect-src *; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <title th:text="${title}">BuildBag</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/js/theme.js"></script>
+</head>
+<body>
+    <button th:fragment="theme-toggle" type="button" class="btn btn--icon" data-action="toggle-theme" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="icon icon--when-dark" aria-hidden="true"><use href="/static/icons.svg#sun"></use></svg>
+        <svg class="icon icon--when-light" aria-hidden="true"><use href="/static/icons.svg#moon"></use></svg>
+    </button>
+
+    <div th:fragment="password-toggle" class="input-action">
+        <button type="button" class="btn btn--icon btn--ghost" data-action="toggle-password" aria-pressed="false" title="Mostrar u ocultar contraseña" aria-label="Mostrar u ocultar contraseña">
+            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#eye"></use></svg>
+        </button>
+    </div>
+</body>
+</html>

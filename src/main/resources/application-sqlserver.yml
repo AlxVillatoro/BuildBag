@@ -1,11 +1,9 @@
 datasources:
   default:
-    url: jdbc:sqlserver://<HOST>:1433;databaseName=<DBNAME>
+    url: "${DB_URL}"
     driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    username: <username>
-    password: <password>
-    schema-generate: UPDATE
-    dialect: SQL_SERVER
+    username: "${DB_USERNAME}"
+    password: "${DB_PASSWORD}"
 
 jpa:
   default:
@@ -14,4 +12,11 @@ jpa:
         dialect: org.hibernate.dialect.SQLServerDialect
 
 micronaut:
-  environments: sqlserver
+  security:
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              # No default on purpose: this environment must not start with the development secret
+              secret: "${JWT_SECRET}"

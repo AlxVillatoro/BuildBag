@@ -1,6 +1,7 @@
 package com.ixlab.service;
 
 import com.ixlab.domain.User;
+import com.ixlab.exception.ApiException;
 import com.ixlab.repository.UserRepository;
 
 import jakarta.inject.Singleton;
@@ -19,20 +20,17 @@ public class UserService {
     }
 
     public User register(String username, String password) {
-        String hash = BCrypt.hashpw(password, BCrypt.gensalt());
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw ApiException.conflict("Ese nombre de usuario ya existe");
+        }
         User u = new User();
         u.setUsername(username);
-        u.setPasswordHash(hash);
+        u.setPasswordHash(BCrypt.hashpw(password, BCrypt.gensalt()));
         return userRepository.save(u);
     }
 
     public Optional<User> authenticate(String username, String password) {
-        Optional<User> o = userRepository.findByUsername(username);
-        if (!o.isPresent()) return Optional.empty();
-        User u = o.get();
-        if (BCrypt.checkpw(password, u.getPasswordHash())) {
-            return Optional.of(u);
-        }
-        return Optional.empty();
+        return userRepository.findByUsername(username)
+            .filter(u -> BCrypt.checkpw(password, u.getPasswordHash()));
     }
 }

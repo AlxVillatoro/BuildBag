@@ -6,17 +6,21 @@ import com.ixlab.domain.User;
 import com.ixlab.dto.CategoryDto;
 import com.ixlab.dto.ConfigurationDto;
 import com.ixlab.dto.SaveConfigurationRequest;
+import com.ixlab.exception.ApiException;
 import com.ixlab.repository.CategoryRepository;
 import com.ixlab.repository.ConfigurationFileRepository;
 import com.ixlab.repository.UserRepository;
+import io.micronaut.transaction.annotation.ReadOnly;
 
 import jakarta.inject.Singleton;
 import javax.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Singleton
@@ -26,10 +30,8 @@ public class ConfigurationService {
     private final ConfigurationFileRepository configRepo;
     private final CategoryRepository categoryRepo;
     private final UserRepository userRepo;
-    
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public ConfigurationService(ConfigurationFileRepository configRepo, 
+    public ConfigurationService(ConfigurationFileRepository configRepo,
                                 CategoryRepository categoryRepo,
                                 UserRepository userRepo) {
         this.configRepo = configRepo;
@@ -37,79 +39,69 @@ public class ConfigurationService {
         this.userRepo = userRepo;
     }
 
-    public List<CategoryDto> getCategoriesWithConfigurations(Long userId) {
-        List<Category> categories = categoryRepo.findByOwnerId(userId);
-        return categories.stream().map(cat -> {
-            CategoryDto dto = new CategoryDto(cat.getId(), cat.getName());
-            List<ConfigurationDto> configs = configRepo.findByCategoryId(cat.getId())
-                .stream()
-                .map(this::toConfigurationDto)
-                .collect(Collectors.toList());
-            dto.setConfigurations(configs);
-            return dto;
-        }).collect(Collectors.toList());
+    @ReadOnly
+    public List<CategoryDto> getCategoriesWithConfigurations(String username) {
+        Map<Long, List<ConfigurationDto>> byCategory = new HashMap<>();
+        for (ConfigurationDto config : configRepo.findSummariesByOwner(username)) {
+            byCategory.computeIfAbsent(config.getCategoryId(), id -> new ArrayList<>()).add(config);
+        }
+        List<CategoryDto> categories = getCategories(username);
+        for (CategoryDto category : categories) {
+            category.setConfigurations(byCategory.getOrDefault(category.getId(), Collections.emptyList()));
+        }
+        return categories;
     }
 
-    public List<CategoryDto> getCategories(Long userId) {
-        return categoryRepo.findByOwnerId(userId)
+    @ReadOnly
+    public List<CategoryDto> getCategories(String username) {
+        return categoryRepo.findByOwnerUsernameOrderByName(username)
             .stream()
             .map(cat -> new CategoryDto(cat.getId(), cat.getName()))
             .collect(Collectors.toList());
     }
 
-    public List<ConfigurationDto> getConfigurations(Long userId) {
-        return configRepo.findByOwnerId(userId)
-            .stream()
-            .map(this::toConfigurationDto)
-            .collect(Collectors.toList());
+    @ReadOnly
+    public List<ConfigurationDto> getConfigurations(String username) {
+        return configRepo.findSummariesByOwner(username);
     }
 
-    public Optional<ConfigurationDto> getConfiguration(Long configId, Long userId) {
-        return configRepo.findByIdAndOwnerId(configId, userId)
-            .map(this::toConfigurationDtoWithContent);
+    @ReadOnly
+    public ConfigurationDto getConfiguration(Long configId, String username) {
+        ConfigurationFile config = requireConfiguration(configId, username);
+        ConfigurationDto dto = ConfigurationDto.from(config);
+        dto.setContentBase64(Base64.getEncoder().encodeToString(config.getContent()));
+        return dto;
     }
 
-    public Category createCategory(String name, Long userId) {
-        User user = userRepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        Category category = new Category(name, user);
-        return categoryRepo.save(category);
+    public CategoryDto createCategory(String name, String username) {
+        Category category = findOrCreateCategory(name, username);
+        return new CategoryDto(category.getId(), category.getName());
     }
 
-    public ConfigurationDto saveConfiguration(SaveConfigurationRequest request, Long userId) {
-        User user = userRepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        
-        Category category;
-        if (request.getCategoryId() != null) {
-            category = categoryRepo.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
-        } else if (request.getCategoryName() != null && !request.getCategoryName().trim().isEmpty()) {
-            category = categoryRepo.findByNameAndOwnerId(request.getCategoryName(), userId)
-                .orElseGet(() -> {
-                    Category newCat = new Category(request.getCategoryName(), user);
-                    return categoryRepo.save(newCat);
-                });
-        } else {
-            throw new RuntimeException("Category ID or name is required");
+    public ConfigurationDto saveConfiguration(SaveConfigurationRequest request, String username) {
+        if (isBlank(request.getName()) || request.getJson() == null) {
+            throw ApiException.badRequest("El nombre y el contenido de la configuración son obligatorios");
         }
-        
+        Category category = resolveCategory(request, username);
+        if (category == null) {
+            throw ApiException.badRequest("Selecciona o crea una categoría");
+        }
+
         ConfigurationFile config = new ConfigurationFile();
-        config.setName(request.getName());
+        config.setName(request.getName().trim());
         config.setSubcategory(request.getSubcategory());
         config.setContent(request.getJson().getBytes(StandardCharsets.UTF_8));
-        config.setOwner(user);
+        config.setOwner(requireUser(username));
         config.setCategory(category);
-        
-        configRepo.save(config);
-        
-        return toConfigurationDto(config);
+
+        return ConfigurationDto.from(configRepo.save(config));
     }
 
-    public ConfigurationDto updateConfiguration(Long configId, SaveConfigurationRequest request, Long userId) {
-        ConfigurationFile config = configRepo.findByIdAndOwnerId(configId, userId)
-            .orElseThrow(() -> new RuntimeException("Configuration not found"));
-        
-        if (request.getName() != null) {
-            config.setName(request.getName());
+    public ConfigurationDto updateConfiguration(Long configId, SaveConfigurationRequest request, String username) {
+        ConfigurationFile config = requireConfiguration(configId, username);
+
+        if (!isBlank(request.getName())) {
+            config.setName(request.getName().trim());
         }
         if (request.getSubcategory() != null) {
             config.setSubcategory(request.getSubcategory());
@@ -117,51 +109,52 @@ public class ConfigurationService {
         if (request.getJson() != null) {
             config.setContent(request.getJson().getBytes(StandardCharsets.UTF_8));
         }
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepo.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+        Category category = resolveCategory(request, username);
+        if (category != null) {
             config.setCategory(category);
         }
-        
-        configRepo.update(config);
-        
-        return toConfigurationDto(config);
+
+        return ConfigurationDto.from(configRepo.update(config));
     }
 
-    public void deleteConfiguration(Long configId, Long userId) {
-        ConfigurationFile config = configRepo.findByIdAndOwnerId(configId, userId)
-            .orElseThrow(() -> new RuntimeException("Configuration not found"));
-        configRepo.delete(config);
+    public void deleteConfiguration(Long configId, String username) {
+        configRepo.delete(requireConfiguration(configId, username));
     }
 
-    public void deleteCategory(Long categoryId, Long userId) {
-        Category category = categoryRepo.findById(categoryId)
-            .filter(c -> c.getOwner().getId().equals(userId))
-            .orElseThrow(() -> new RuntimeException("Category not found"));
-        categoryRepo.delete(category);
+    public void deleteCategory(Long categoryId, String username) {
+        categoryRepo.delete(requireCategory(categoryId, username));
     }
 
-    private ConfigurationDto toConfigurationDto(ConfigurationFile cf) {
-        ConfigurationDto dto = new ConfigurationDto();
-        dto.setId(cf.getId());
-        dto.setName(cf.getName());
-        dto.setSubcategory(cf.getSubcategory());
-        if (cf.getCategory() != null) {
-            dto.setCategoryId(cf.getCategory().getId());
-            dto.setCategoryName(cf.getCategory().getName());
+    /** The category named by the request, or null if it names none. Only ever resolves to the user's own categories. */
+    private Category resolveCategory(SaveConfigurationRequest request, String username) {
+        if (request.getCategoryId() != null) {
+            return requireCategory(request.getCategoryId(), username);
         }
-        if (cf.getCreatedAt() != null) {
-            dto.setCreatedAt(cf.getCreatedAt().format(DATE_FORMATTER));
-        }
-        if (cf.getUpdatedAt() != null) {
-            dto.setUpdatedAt(cf.getUpdatedAt().format(DATE_FORMATTER));
-        }
-        return dto;
+        return isBlank(request.getCategoryName()) ? null : findOrCreateCategory(request.getCategoryName(), username);
     }
 
-    private ConfigurationDto toConfigurationDtoWithContent(ConfigurationFile cf) {
-        ConfigurationDto dto = toConfigurationDto(cf);
-        dto.setContentBase64(Base64.getEncoder().encodeToString(cf.getContent()));
-        return dto;
+    private Category findOrCreateCategory(String name, String username) {
+        String trimmed = name.trim();
+        return categoryRepo.findByNameAndOwnerUsername(trimmed, username)
+            .orElseGet(() -> categoryRepo.save(new Category(trimmed, requireUser(username))));
+    }
+
+    private Category requireCategory(Long categoryId, String username) {
+        return categoryRepo.findByIdAndOwnerUsername(categoryId, username)
+            .orElseThrow(() -> ApiException.notFound("Categoría no encontrada"));
+    }
+
+    private ConfigurationFile requireConfiguration(Long configId, String username) {
+        return configRepo.findByIdAndOwnerUsername(configId, username)
+            .orElseThrow(() -> ApiException.notFound("Configuración no encontrada"));
+    }
+
+    private User requireUser(String username) {
+        return userRepo.findByUsername(username)
+            .orElseThrow(() -> ApiException.unauthorized("Usuario no encontrado"));
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

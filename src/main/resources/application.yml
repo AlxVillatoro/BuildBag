@@ -9,51 +9,42 @@ micronaut:
         enabled: true
         mapping: /static/**
         paths: classpath:static
-      assets:
+      swagger:
         enabled: true
-        mapping: /assets/**
-        paths: classpath:static/assets
+        mapping: /swagger/**
+        paths: classpath:META-INF/swagger
+      swagger-ui:
+        enabled: true
+        mapping: /swagger-ui/**
+        paths: classpath:META-INF/swagger/views/swagger-ui
+      rapidoc:
+        enabled: true
+        mapping: /rapidoc/**
+        paths: classpath:META-INF/swagger/views/rapidoc
+      redoc:
+        enabled: true
+        mapping: /redoc/**
+        paths: classpath:META-INF/swagger/views/redoc
   views:
     thymeleaf:
       enabled: true
   security:
     enabled: true
+    # Controllers declare their access with @Secured; this map only covers routes without a controller
     intercept-url-map:
-      - pattern: /
-        http-method: GET
-        access:
-          - isAnonymous()
-      - pattern: /login
-        http-method: GET
-        access:
-          - isAnonymous()
-      - pattern: /register
-        http-method: GET
-        access:
-          - isAnonymous()
-      - pattern: /panel
-        http-method: GET
-        access:
-          - isAnonymous()
-      - pattern: /api/auth/**
-        access:
-          - isAnonymous()
       - pattern: /static/**
         access:
           - isAnonymous()
-      - pattern: /assets/**
+      - pattern: /swagger/**
         access:
           - isAnonymous()
-      - pattern: /swagger/**
+      - pattern: /swagger-ui/**
         access:
           - isAnonymous()
       - pattern: /rapidoc/**
         access:
           - isAnonymous()
       - pattern: /redoc/**
-        access:
-          - isAnonymous()
-      - pattern: /openapi/**
         access:
           - isAnonymous()
     token:
@@ -66,9 +57,6 @@ micronaut:
         generator:
           access-token:
             expiration: 86400
-    redirect:
-      login-failure: /login?error=true
-      login-success: /panel
 
 datasources:
   default:
@@ -76,12 +64,10 @@ datasources:
     driverClassName: org.h2.Driver
     username: sa
     password: ""
-    schema-generate: CREATE_DROP
-    dialect: H2
 
 jpa:
   default:
-    packages: com.ixlab
+    packages: com.ixlab.domain
     properties:
       hibernate:
         hbm2ddl:
@@ -89,16 +75,6 @@ jpa:
         dialect: org.hibernate.dialect.H2Dialect
         show_sql: false
 
-endpoints:
-  openapi:
-    enabled: true
-    path: /openapi
-  swagger:
-    enabled: true
-    path: /swagger
-
 logging:
   level:
     root: INFO
-    com.ixlab: DEBUG
-    io.micronaut.security: DEBUG

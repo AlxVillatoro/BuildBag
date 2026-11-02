@@ -17,6 +17,7 @@
     <properties>
         <java.version>1.8</java.version>
         <micronaut.version>3.10.1</micronaut.version>
+        <exec.mainClass>com.ixlab.Application</exec.mainClass>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
@@ -33,10 +34,15 @@
         <dependency>
             <groupId>io.micronaut</groupId>
             <artifactId>micronaut-http-client</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.micronaut.data</groupId>
             <artifactId>micronaut-data-hibernate-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-validation</artifactId>
         </dependency>
         <dependency>
             <groupId>io.micronaut.security</groupId>
@@ -53,27 +59,6 @@
         <dependency>
             <groupId>io.micronaut.openapi</groupId>
             <artifactId>micronaut-openapi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.mindrot</groupId>
@@ -97,14 +82,20 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
         </dependency>
-        <!-- Swagger UI webjar to serve docs UI -->
+        <!-- JDBC drivers for the sqlserver and oracle environments -->
         <dependency>
-            <groupId>org.webjars</groupId>
-            <artifactId>swagger-ui</artifactId>
-            <version>4.15.5</version>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>9.4.1.jre8</version>
+            <scope>runtime</scope>
         </dependency>
-        
-        <!-- Thymeleaf -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>19.8.0.0</version>
+            <scope>runtime</scope>
+        </dependency>
+<!-- Thymeleaf -->
         <dependency>
             <groupId>io.micronaut.views</groupId>
             <artifactId>micronaut-views-thymeleaf</artifactId>
@@ -142,6 +133,11 @@
 	      <plugin>
 	        <groupId>io.micronaut.build</groupId>
 	        <artifactId>micronaut-maven-plugin</artifactId>
+	      </plugin>
+      
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-shade-plugin</artifactId>
 	      </plugin>
       
 	      <plugin>

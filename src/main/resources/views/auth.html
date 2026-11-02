@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head(${title})}"></head>
+<body class="auth" th:with="isRegister=${mode == 'register'}">
+    <div class="auth__theme"><button th:replace="~{fragments/common :: theme-toggle}"></button></div>
+
+    <main class="auth__column">
+        <header class="auth__brand">
+            <span class="brand-mark brand-mark--large"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logo"></use></svg></span>
+            <h1>BuildBag</h1>
+            <p>Configura tus archivos .properties, guiado por los comentarios de cada propiedad.</p>
+        </header>
+
+        <section id="auth-card" class="card auth__card">
+            <h2 th:text="${isRegister} ? 'Crear cuenta' : 'Iniciar sesión'">Iniciar sesión</h2>
+
+            <p id="auth-message" class="notice notice--error" role="alert" hidden></p>
+
+            <form id="auth-form" th:attr="data-mode=${mode}">
+                <div class="form-field">
+                    <label for="username">Usuario</label>
+                    <input id="username" name="username" type="text" class="input" required minlength="3" maxlength="50"
+                           autocomplete="username" autofocus>
+                </div>
+
+                <div class="form-field">
+                    <label for="password">Contraseña</label>
+                    <div class="input-group">
+                        <input id="password" name="password" type="password" class="input" required
+                               th:attr="minlength=${isRegister} ? 6 : 1, autocomplete=${isRegister} ? 'new-password' : 'current-password'">
+                        <div th:replace="~{fragments/common :: password-toggle}"></div>
+                    </div>
+                    <div th:if="${isRegister}" class="strength" id="strength" data-score="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                    <p th:if="${isRegister}" id="strength-text" class="form-hint">Mínimo 6 caracteres</p>
+                </div>
+
+                <div class="form-field" th:if="${isRegister}">
+                    <label for="confirmPassword">Confirmar contraseña</label>
+                    <div class="input-group">
+                        <input id="confirmPassword" name="confirmPassword" type="password" class="input" required autocomplete="new-password">
+                        <div th:replace="~{fragments/common :: password-toggle}"></div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn--block" th:text="${isRegister} ? 'Crear cuenta' : 'Entrar'">Entrar</button>
+            </form>
+
+            <p class="auth__switch" th:if="${isRegister}">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
+            <p class="auth__switch" th:unless="${isRegister}">¿No tienes cuenta? <a href="/register">Regístrate</a></p>
+        </section>
+    </main>
+
+    <script type="module" src="/static/js/auth.js"></script>
+</body>
+</html>

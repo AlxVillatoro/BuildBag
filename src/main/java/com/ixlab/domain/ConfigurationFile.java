@@ -5,7 +5,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "configuration_files")
+@Table(name = "configuration_files", indexes = {
+    @Index(name = "idx_configuration_files_user", columnList = "user_id"),
+    @Index(name = "idx_configuration_files_category", columnList = "category_id")
+})
 public class ConfigurationFile implements Serializable {
 
     @Id

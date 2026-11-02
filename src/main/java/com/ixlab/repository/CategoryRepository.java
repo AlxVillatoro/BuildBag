@@ -9,8 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends CrudRepository<Category, Long> {
-    List<Category> findByOwnerId(Long ownerId);
-    Optional<Category> findByNameAndOwnerId(String name, Long ownerId);
-    boolean existsByNameAndOwnerId(String name, Long ownerId);
+    List<Category> findByOwnerUsernameOrderByName(String username);
+    Optional<Category> findByNameAndOwnerUsername(String name, String username);
+    Optional<Category> findByIdAndOwnerUsername(Long id, String username);
 }
-

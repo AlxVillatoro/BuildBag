@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/common :: head(${title})}"></head>
+<body class="panel">
+    <header class="topbar">
+        <a class="topbar__brand" href="/panel">
+            <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logo"></use></svg></span>
+            <span>BuildBag</span>
+        </a>
+
+        <div class="topbar__open">
+            <label for="config-select" class="sr-only">Configuración guardada</label>
+            <select id="config-select" class="input" title="Abrir una configuración guardada"></select>
+            <button type="button" class="btn" data-action="new-config"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg><span>Nueva</span></button>
+            <button type="button" class="btn" data-action="import"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#upload"></use></svg><span>Importar</span></button>
+        </div>
+
+        <div class="topbar__user">
+            <button th:replace="~{fragments/common :: theme-toggle}"></button>
+            <span id="username" class="topbar__name"></span>
+            <button type="button" class="btn btn--icon" data-action="logout" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#logout"></use></svg>
+            </button>
+        </div>
+    </header>
+
+    <input type="file" id="file-input" accept=".properties,.json" hidden>
+    <datalist id="all-keys"></datalist>
+
+    <div class="layout">
+        <aside id="sidebar" class="sidebar" hidden></aside>
+
+        <main class="content">
+            <section id="welcome" class="welcome">
+                <h1>Configura tu archivo .properties paso a paso</h1>
+                <p class="welcome__lead">Abre un archivo y BuildBag lo convierte en un formulario donde cada propiedad se explica con sus propios comentarios.</p>
+
+                <ol class="steps">
+                    <li><strong>Abre</strong> un archivo .properties o .json, una configuración guardada, o empieza desde cero.</li>
+                    <li><strong>Revisa</strong> cada propiedad guiado por su descripción. Te indicamos lo que falta.</li>
+                    <li><strong>Guarda y descarga</strong> tu archivo .properties, listo para usar.</li>
+                </ol>
+
+                <button type="button" id="dropzone" class="dropzone" data-action="import">
+                    <svg class="icon icon--large" aria-hidden="true"><use href="/static/icons.svg#upload"></use></svg>
+                    <strong>Suelta aquí tu archivo o haz clic para elegirlo</strong>
+                    <span>.properties o .json</span>
+                </button>
+                <button type="button" class="btn btn--ghost" data-action="new-config">O crea una configuración vacía</button>
+            </section>
+
+            <section id="workspace" hidden>
+                <div class="workbar">
+                    <div class="workbar__title">
+                        <div class="workbar__heading">
+                            <h1 id="project-name"></h1>
+                            <span id="save-status" class="badge"></span>
+                        </div>
+                        <p id="project-meta" class="workbar__meta"></p>
+                    </div>
+                    <div class="workbar__actions">
+                        <button type="button" class="btn btn--icon" data-action="edit-details" title="Detalles de la configuración" aria-label="Detalles de la configuración">
+                            <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#sliders"></use></svg>
+                        </button>
+                        <button type="button" class="btn" data-action="preview"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#eye"></use></svg><span>Vista previa</span></button>
+                        <button type="button" id="save-button" class="btn" data-action="save"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#save"></use></svg><span>Guardar</span></button>
+                        <button type="button" class="btn btn--primary" data-action="download"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#download"></use></svg><span>Descargar</span></button>
+                        <details class="menu">
+                            <summary class="btn btn--icon" aria-label="Más acciones" title="Más acciones"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#more"></use></svg></summary>
+                            <div class="menu__list">
+                                <button type="button" data-action="check-all-services">Verificar servicios</button>
+                                <button type="button" data-action="export-json">Exportar JSON</button>
+                                <button type="button" data-action="save-copy">Guardar como copia</button>
+                                <hr>
+                                <button type="button" data-action="close-config">Cerrar</button>
+                                <button type="button" class="menu__danger" data-action="delete-config">Eliminar</button>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="search">
+                        <svg class="icon" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg>
+                        <label for="search" class="sr-only">Buscar propiedad</label>
+                        <input id="search" type="search" class="input" placeholder="Buscar por nombre, clave o descripción">
+                    </div>
+                    <label class="check"><input id="only-pending" type="checkbox"> Solo pendientes</label>
+                    <label class="check" title="Muestra solo los valores distintos al original"><input id="only-modified" type="checkbox"> Solo modificadas<span id="modified-count"></span></label>
+                    <div class="toolbar__spacer"></div>
+                    <div class="segmented" role="group" aria-label="Vista">
+                        <button type="button" class="segmented__item" data-action="set-view" data-view="guided" aria-pressed="true" title="Una propiedad por bloque, con su explicación a la vista"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#rows"></use></svg><span>Guiada</span></button>
+                        <button type="button" class="segmented__item" data-action="set-view" data-view="compact" aria-pressed="false" title="Tabla editable, con los dominios en columnas"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#table"></use></svg><span>Compacta</span></button>
+                    </div>
+                    <button type="button" class="btn btn--small btn--ghost" data-action="expand-all">Expandir</button>
+                    <button type="button" class="btn btn--small btn--ghost" data-action="collapse-all">Contraer</button>
+                    <label class="check check--switch" title="Muestra los controles para cambiar categorías, propiedades y sus descripciones">
+                        <input id="structure-toggle" type="checkbox"> Editar estructura
+                    </label>
+                </div>
+
+                <div id="global-sections" class="sections"></div>
+                <div id="structure-actions" class="structure-actions" hidden>
+                    <button type="button" class="btn" data-action="add-section"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg><span>Nueva categoría</span></button>
+                </div>
+
+                <section id="domains" class="domains" hidden>
+                    <div class="domains__header">
+                        <div>
+                            <h2>Configuración por dominio</h2>
+                            <p>Cada dominio tiene sus propios valores para estas propiedades.</p>
+                        </div>
+                        <div class="domains__actions">
+                            <button type="button" id="remove-domain" class="btn btn--small" data-action="remove-domain"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#minus"></use></svg><span>Quitar el último</span></button>
+                            <button type="button" class="btn btn--small" data-action="add-domain"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg><span>Agregar dominio</span></button>
+                        </div>
+                    </div>
+                    <div id="domain-tabs" class="tabs" role="tablist" aria-label="Dominios"></div>
+                    <div id="domain-sections" class="sections"></div>
+                </section>
+
+                <aside id="inspector" class="inspector" aria-label="Propiedad seleccionada" aria-live="polite" hidden></aside>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="details-dialog" class="dialog">
+        <form id="details-form" method="dialog">
+            <header class="dialog__header">
+                <h2 id="details-title">Detalles</h2>
+                <button type="button" class="btn btn--icon btn--ghost" data-action="close-dialog" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"></use></svg></button>
+            </header>
+            <div class="dialog__body">
+                <p id="details-error" class="notice notice--error" role="alert" hidden></p>
+                <div class="form-field">
+                    <label for="detail-name">Nombre de la configuración</label>
+                    <input id="detail-name" name="name" class="input" required placeholder="Ej: Portal de firma">
+                </div>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="detail-category">Categoría</label>
+                        <select id="detail-category" name="category" class="input"></select>
+                        <p class="form-hint">Agrupa tus configuraciones, por ejemplo por empresa o proyecto.</p>
+                    </div>
+                    <div class="form-field" id="detail-new-category-field" hidden>
+                        <label for="detail-new-category">Nombre de la nueva categoría</label>
+                        <input id="detail-new-category" name="newCategory" class="input">
+                    </div>
+                    <div class="form-field">
+                        <label for="detail-subcategory">Subcategoría (opcional)</label>
+                        <input id="detail-subcategory" name="subcategory" class="input" placeholder="Ej: producción, v1.2">
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="detail-description">Descripción (opcional)</label>
+                    <textarea id="detail-description" name="description" class="input" rows="2"></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="detail-version">Versión</label>
+                        <input id="detail-version" name="version" class="input">
+                    </div>
+                    <div class="form-field">
+                        <label for="detail-output">Archivo de salida</label>
+                        <input id="detail-output" name="outputFileName" class="input" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="detail-pattern">Patrón de dominio</label>
+                        <input id="detail-pattern" name="domainKeyPattern" class="input" required placeholder="domain{N}">
+                        <p class="form-hint">Las claves con este patrón se agrupan por dominio. {N} es el número: <code>tenant{N}</code> une tenant1, tenant2…</p>
+                    </div>
+                </div>
+            </div>
+            <footer class="dialog__footer">
+                <button type="button" class="btn" data-action="close-dialog">Cancelar</button>
+                <button type="submit" id="details-submit" class="btn btn--primary">Aplicar</button>
+            </footer>
+        </form>
+    </dialog>
+
+    <dialog id="preview-dialog" class="dialog dialog--wide">
+        <header class="dialog__header">
+            <h2 id="preview-title">Vista previa</h2>
+            <div class="dialog__header-actions">
+                <button type="button" class="btn" data-action="copy-preview"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#copy"></use></svg><span>Copiar</span></button>
+                <button type="button" class="btn btn--icon btn--ghost" data-action="close-dialog" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#close"></use></svg></button>
+            </div>
+        </header>
+        <pre id="preview-content" class="code" tabindex="0"></pre>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog dialog--small">
+        <form method="dialog">
+            <header class="dialog__header"><h2 data-confirm-title></h2></header>
+            <div class="dialog__body"><p data-confirm-message></p></div>
+            <footer class="dialog__footer">
+                <button class="btn" value="cancel">Cancelar</button>
+                <button class="btn btn--primary" value="accept">Continuar</button>
+            </footer>
+        </form>
+    </dialog>
+
+    <div id="toast" class="toast" popover="manual" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="/static/js/panel.js"></script>
+</body>
+</html>

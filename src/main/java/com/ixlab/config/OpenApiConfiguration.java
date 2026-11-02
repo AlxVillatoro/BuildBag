@@ -19,8 +19,8 @@ import io.swagger.v3.oas.annotations.servers.Server;
             email = "soporte@ixlab.com"
         ),
         license = @License(
-            name = "MIT License",
-            url = "https://opensource.org/licenses/MIT"
+            name = "Apache-2.0",
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
         )
     ),
     servers = {

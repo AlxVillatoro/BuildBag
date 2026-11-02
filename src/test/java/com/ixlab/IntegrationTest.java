@@ -15,6 +15,8 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -317,5 +319,122 @@ public class IntegrationTest {
         
         assertEquals(400, exception.getStatus().getCode());
         System.out.println("Short password correctly rejected");
+    }
+
+    @Test
+    @Order(16)
+    void testRegisterExistingUsernameIsConflict() {
+        Map<String, String> credentials = new HashMap<>();
+        credentials.put("username", "testuser");
+        credentials.put("password", "testpass123");
+
+        HttpClientResponseException exception = assertThrows(HttpClientResponseException.class, () -> {
+            client.toBlocking().exchange(HttpRequest.POST("/api/auth/register", credentials), Map.class);
+        });
+
+        assertEquals(409, exception.getStatus().getCode());
+        assertTrue(exception.getResponse().getBody(Map.class).isPresent());
+        assertNotNull(exception.getResponse().getBody(Map.class).get().get("error"));
+    }
+
+    @Test
+    @Order(17)
+    void testUpdateKeepsSingleConfigurationAndAcceptsCategoryName() {
+        Long id = createConfig(accessToken, "Original", "{\"a\":1}");
+        int before = list("/api/configs", accessToken).size();
+
+        Map<String, Object> update = new HashMap<>();
+        update.put("json", "{\"a\":2}");
+        update.put("categoryName", "Movida");
+        Map<?, ?> updated = client.toBlocking().retrieve(
+            HttpRequest.PUT("/api/configs/" + id, update).header("Authorization", "Bearer " + accessToken), Map.class);
+
+        assertEquals("Movida", updated.get("categoryName"));
+        assertEquals(before, list("/api/configs", accessToken).size(), "Updating must not create a copy");
+        assertEquals("{\"a\":2}", content(id));
+    }
+
+    @Test
+    @Order(18)
+    void testContentKeepsNonAsciiCharacters() {
+        String json = "{\"projectName\":\"Configuración de año ñandú\"}";
+        assertEquals(json, content(createConfig(accessToken, "Acentos", json)));
+    }
+
+    @Test
+    @Order(19)
+    void testCreateCategoryWithSameNameReturnsExisting() {
+        Map<String, String> body = new HashMap<>();
+        body.put("name", "Unica");
+        HttpRequest<?> first = HttpRequest.POST("/api/categories", body).header("Authorization", "Bearer " + accessToken);
+        HttpRequest<?> second = HttpRequest.POST("/api/categories", body).header("Authorization", "Bearer " + accessToken);
+
+        assertEquals(
+            client.toBlocking().retrieve(first, Map.class).get("id"),
+            client.toBlocking().retrieve(second, Map.class).get("id"));
+    }
+
+    @Test
+    @Order(20)
+    void testUsersCannotReachEachOthersData() {
+        Long victimConfig = createConfig(accessToken, "Privada", "{}");
+        Map<String, String> victimCategory = new HashMap<>();
+        victimCategory.put("name", "Privada");
+        Long victimCategoryId = ((Number) client.toBlocking().retrieve(
+            HttpRequest.POST("/api/categories", victimCategory).header("Authorization", "Bearer " + accessToken),
+            Map.class).get("id")).longValue();
+
+        Map<String, String> credentials = new HashMap<>();
+        credentials.put("username", "otheruser");
+        credentials.put("password", "testpass123");
+        String otherToken = (String) client.toBlocking().retrieve(
+            HttpRequest.POST("/api/auth/register", credentials), Map.class).get("accessToken");
+
+        assertStatus(404, HttpRequest.GET("/api/configs/" + victimConfig).header("Authorization", "Bearer " + otherToken));
+        assertStatus(404, HttpRequest.DELETE("/api/configs/" + victimConfig).header("Authorization", "Bearer " + otherToken));
+        assertStatus(404, HttpRequest.DELETE("/api/categories/" + victimCategoryId).header("Authorization", "Bearer " + otherToken));
+
+        Map<String, Object> intoVictimCategory = new HashMap<>();
+        intoVictimCategory.put("name", "Intrusa");
+        intoVictimCategory.put("categoryId", victimCategoryId);
+        intoVictimCategory.put("json", "{}");
+        assertStatus(404, HttpRequest.POST("/api/configs", intoVictimCategory).header("Authorization", "Bearer " + otherToken));
+        assertTrue(list("/api/configs", otherToken).isEmpty());
+    }
+
+    @Test
+    @Order(21)
+    void testPublicPagesAndAssetsNeedNoToken() {
+        assertEquals(200, client.toBlocking().exchange(HttpRequest.GET("/login"), String.class).getStatus().getCode());
+        assertEquals(200, client.toBlocking().exchange(HttpRequest.GET("/register"), String.class).getStatus().getCode());
+        assertEquals(200, client.toBlocking().exchange(HttpRequest.GET("/panel"), String.class).getStatus().getCode());
+        assertEquals(200, client.toBlocking().exchange(HttpRequest.GET("/static/app.css"), String.class).getStatus().getCode());
+    }
+
+    private Long createConfig(String token, String name, String json) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("categoryName", "Pruebas");
+        body.put("json", json);
+        Map<?, ?> created = client.toBlocking().retrieve(
+            HttpRequest.POST("/api/configs", body).header("Authorization", "Bearer " + token), Map.class);
+        return ((Number) created.get("id")).longValue();
+    }
+
+    private List<?> list(String path, String token) {
+        return client.toBlocking().retrieve(HttpRequest.GET(path).header("Authorization", "Bearer " + token), List.class);
+    }
+
+    private String content(Long id) {
+        Map<?, ?> config = client.toBlocking().retrieve(
+            HttpRequest.GET("/api/configs/" + id).header("Authorization", "Bearer " + accessToken), Map.class);
+        return new String(Base64.getDecoder().decode((String) config.get("contentBase64")), StandardCharsets.UTF_8);
+    }
+
+    private void assertStatus(int status, HttpRequest<?> request) {
+        HttpClientResponseException exception = assertThrows(HttpClientResponseException.class, () -> {
+            client.toBlocking().exchange(request, Map.class);
+        });
+        assertEquals(status, exception.getStatus().getCode());
     }
 }

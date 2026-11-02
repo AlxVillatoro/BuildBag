@@ -1,6 +1,14 @@
 package com.ixlab.dto;
 
+import com.ixlab.domain.Category;
+import com.ixlab.domain.ConfigurationFile;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class ConfigurationDto {
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private Long id;
     private String name;
     private String subcategory;
@@ -11,6 +19,24 @@ public class ConfigurationDto {
     private String updatedAt;
 
     public ConfigurationDto() {}
+
+    public ConfigurationDto(Long id, String name, String subcategory, Long categoryId, String categoryName,
+                            LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.name = name;
+        this.subcategory = subcategory;
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
+        this.createdAt = createdAt == null ? null : createdAt.format(DATE_FORMATTER);
+        this.updatedAt = updatedAt == null ? null : updatedAt.format(DATE_FORMATTER);
+    }
+
+    public static ConfigurationDto from(ConfigurationFile config) {
+        Category category = config.getCategory();
+        return new ConfigurationDto(config.getId(), config.getName(), config.getSubcategory(),
+            category == null ? null : category.getId(), category == null ? null : category.getName(),
+            config.getCreatedAt(), config.getUpdatedAt());
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -36,4 +62,3 @@ public class ConfigurationDto {
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
 }
-
